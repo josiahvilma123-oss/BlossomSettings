@@ -1,0 +1,18 @@
+# BlossomSettings config
+
+mob-spawns:
+  # Natural hostile spawns are cancelled when every player within this many
+  # blocks has "Mob Spawns" turned OFF. If even one nearby player wants mobs,
+  # they still spawn (so one player can't turn off spawns for everybody).
+  check-radius: 64
+
+money-nametags:
+  # MiniMessage format. <balance> is replaced with the short balance (3.9K, 1.2M...)
+  format: "<green>$</green> <white><balance></white>"
+  # How far above the player's head the line floats. Raise it if it overlaps
+  # the vanilla name, lower it to sit closer.
+  height-offset: 0.75
+  # How often the tag follows the player (ticks). 2 = smooth and cheap.
+  update-interval-ticks: 2
+  # How often balances are re-read from your economy plugin (ticks). 20 = 1 sec.
+  balance-refresh-ticks: 20

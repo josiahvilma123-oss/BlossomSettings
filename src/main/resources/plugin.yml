@@ -1,0 +1,17 @@
+name: BlossomSettings
+version: '${project.version}'
+main: com.blossom.settings.BlossomSettings
+api-version: '1.21'
+description: Per-player settings menu with mob/phantom toggles, night vision and money nametags.
+softdepend: [Vault]
+
+commands:
+  settings:
+    description: Open the settings menu
+    aliases: [toggles, prefs]
+    permission: blossomsettings.use
+
+permissions:
+  blossomsettings.use:
+    description: Use the settings menu
+    default: true
