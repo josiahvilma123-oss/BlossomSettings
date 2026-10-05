@@ -51,6 +51,16 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+            if (!sender.hasPermission("blossomsettings.reload")) {
+                sender.sendMessage("You don't have permission to do that.");
+                return true;
+            }
+            reloadConfig();
+            nametags.reload();
+            sender.sendMessage("BlossomSettings config reloaded.");
+            return true;
+        }
         if (!(sender instanceof Player player)) {
             sender.sendMessage("Only players can open the settings menu.");
             return true;

@@ -56,6 +56,12 @@ public final class MoneyNametags {
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, interval);
     }
 
+    /** Re-reads config.yml; tags are rebuilt within a second. */
+    public void reload() {
+        stop();
+        start();
+    }
+
     public void stop() {
         if (task != null) task.cancel();
         for (TextDisplay d : displays.values()) {
