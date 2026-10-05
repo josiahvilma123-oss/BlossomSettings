@@ -12,6 +12,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashMap;
@@ -74,7 +75,7 @@ public final class MoneyNametags {
         for (Player p : Bukkit.getOnlinePlayers()) {
             UUID id = p.getUniqueId();
 
-            if (p.isDead() || p.isInvisible() || p.getGameMode() == GameMode.SPECTATOR) {
+            if (p.isDead() || p.isInvisible() || isVanished(p) || p.getGameMode() == GameMode.SPECTATOR) {
                 remove(id);
                 continue;
             }
@@ -99,6 +100,29 @@ public final class MoneyNametags {
                     shownText.put(id, bal);
                 }
                 d.teleport(anchor(p));
+                if (refresh) syncViewers(p, d);
+            }
+        }
+    }
+
+    /** EssentialsX, SuperVanish and PremiumVanish all set the "vanished" metadata. */
+    private boolean isVanished(Player p) {
+        for (MetadataValue v : p.getMetadata("vanished")) {
+            if (v.asBoolean()) return true;
+        }
+        return false;
+    }
+
+    /** Only viewers who can actually see the player (hidePlayer-style vanish) see the tag. */
+    private void syncViewers(Player owner, TextDisplay display) {
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (viewer.getUniqueId().equals(owner.getUniqueId())) continue;
+            boolean show = plugin.settings().get(viewer.getUniqueId(), Setting.MONEY_NAMETAGS)
+                    && viewer.canSee(owner);
+            if (show) {
+                viewer.showEntity(plugin, display);
+            } else {
+                viewer.hideEntity(plugin, display);
             }
         }
     }
@@ -133,7 +157,8 @@ public final class MoneyNametags {
 
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             if (viewer.getUniqueId().equals(id)) continue;
-            if (plugin.settings().get(viewer.getUniqueId(), Setting.MONEY_NAMETAGS)) {
+            if (plugin.settings().get(viewer.getUniqueId(), Setting.MONEY_NAMETAGS)
+                    && viewer.canSee(owner)) {
                 viewer.showEntity(plugin, display);
             }
         }
@@ -144,7 +169,8 @@ public final class MoneyNametags {
         boolean wants = plugin.settings().get(viewer.getUniqueId(), Setting.MONEY_NAMETAGS);
         for (Map.Entry<UUID, TextDisplay> e : displays.entrySet()) {
             if (e.getKey().equals(viewer.getUniqueId())) continue;
-            if (wants) {
+            Player owner = Bukkit.getPlayer(e.getKey());
+            if (wants && owner != null && viewer.canSee(owner)) {
                 viewer.showEntity(plugin, e.getValue());
             } else {
                 viewer.hideEntity(plugin, e.getValue());
