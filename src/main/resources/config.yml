@@ -1,10 +1,18 @@
 # BlossomSettings config
 
 mob-spawns:
-  # Natural hostile spawns are cancelled when every player within this many
-  # blocks has "Mob Spawns" turned OFF. If even one nearby player wants mobs,
-  # they still spawn (so one player can't turn off spawns for everybody).
-  check-radius: 64
+  # Hostile spawns are cancelled when every player within this many blocks has
+  # "Mob Spawns" turned OFF. Vanilla spawns mobs up to ~128 blocks from a
+  # player, so keep this at 128. If even one nearby player wants mobs, they
+  # still spawn (one player can't turn spawns off for everybody).
+  radius: 128
+  # Which kinds of spawns get blocked. Spawners, spawn eggs and commands are
+  # NOT in this list on purpose, so dungeons and your own spawners keep working.
+  cancel-reasons:
+    - NATURAL
+    - JOCKEY
+    - MOUNT
+    - PATROL
 
 money-nametags:
   # MiniMessage format. <balance> is replaced with the short balance (3.9K, 1.2M...)

@@ -15,25 +15,47 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 
+import java.util.EnumSet;
+import java.util.Locale;
+import java.util.Set;
+
 public final class FeatureListener implements Listener {
 
     private final BlossomSettings plugin;
 
+    private final Set<CreatureSpawnEvent.SpawnReason> reasons =
+            EnumSet.noneOf(CreatureSpawnEvent.SpawnReason.class);
+    private double radiusSq = 128 * 128;
+
     public FeatureListener(BlossomSettings plugin) {
         this.plugin = plugin;
+        loadConfig();
+    }
+
+    /** Reads the mob-spawns section of config.yml (also called by /settings reload). */
+    public void loadConfig() {
+        reasons.clear();
+        for (String name : plugin.getConfig().getStringList("mob-spawns.cancel-reasons")) {
+            try {
+                reasons.add(CreatureSpawnEvent.SpawnReason.valueOf(name.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ex) {
+                plugin.getLogger().warning("Unknown spawn reason in config: " + name);
+            }
+        }
+        if (reasons.isEmpty()) reasons.add(CreatureSpawnEvent.SpawnReason.NATURAL);
+        double r = plugin.getConfig().getDouble("mob-spawns.radius", 128);
+        radiusSq = r * r;
     }
 
     /* ---------------- Mob spawns ---------------- */
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onNaturalSpawn(CreatureSpawnEvent e) {
-        if (e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) return;
+        if (!reasons.contains(e.getSpawnReason())) return;
         if (!(e.getEntity() instanceof Enemy)) return;
         if (e.getEntity() instanceof Phantom) return; // handled by the phantom toggle
 
         Location loc = e.getLocation();
-        double radius = plugin.getConfig().getDouble("mob-spawns.check-radius", 64);
-        double radiusSq = radius * radius;
 
         boolean anyoneNearby = false;
         boolean someoneWantsMobs = false;

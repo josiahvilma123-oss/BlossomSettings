@@ -15,6 +15,7 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
     private SettingsManager settings;
     private SettingsMenu menu;
     private MoneyNametags nametags;
+    private FeatureListener features;
     private Economy economy;
     private boolean warnedNoEconomy = false;
 
@@ -29,7 +30,8 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
         nametags = new MoneyNametags(this);
 
         getServer().getPluginManager().registerEvents(menu, this);
-        getServer().getPluginManager().registerEvents(new FeatureListener(this), this);
+        features = new FeatureListener(this);
+        getServer().getPluginManager().registerEvents(features, this);
 
         if (getCommand("settings") != null) {
             getCommand("settings").setExecutor(this);
@@ -57,6 +59,7 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
                 return true;
             }
             reloadConfig();
+            features.loadConfig();
             nametags.reload();
             sender.sendMessage("BlossomSettings config reloaded.");
             return true;
