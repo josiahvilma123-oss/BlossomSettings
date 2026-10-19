@@ -31,9 +31,9 @@ shards:
 
 # /ps prices in Shards. Set a price to 0 to hide that item.
 shard-prices:
-  blossom_pickaxe: 0          # old 3x3 pickaxe (retired)
+  blossom_pickaxe: 350        # mines 3x3, lasts 24 hours
   petal_pickaxe: 300          # auto-smelts, lasts 24 hours
-  blossom_axe: 250            # chops 3x3, lasts 24 hours
+  blossom_axe: 250            # chops faster, lasts 24 hours
   cow_spawner: 300
   pig_spawner: 300
   sheep_spawner: 300
@@ -45,8 +45,10 @@ shard-prices:
   enderman_spawner: 1000
 
 tools:
-  # How long the /ps pickaxe and axe last before they disappear
+  # How long the /ps pickaxes and axe last before they disappear
   lifetime-hours: 24
+  # How much faster the Blossom Axe breaks blocks (0.5 = 50% faster)
+  axe-speed-bonus: 0.5
 
 spawners:
   enabled: true

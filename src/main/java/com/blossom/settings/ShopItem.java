@@ -9,7 +9,7 @@ import java.util.List;
 public enum ShopItem {
     // Custom tools
     // (the AMETHYST_ names are kept so tools players already own keep working)
-    AMETHYST_PICKAXE(Category.TOOL, "blossom_pickaxe", "Blossom Pickaxe", 0, null),
+    AMETHYST_PICKAXE(Category.TOOL, "blossom_pickaxe", "Blossom Pickaxe", 350, null),
     AMETHYST_SMELTER(Category.TOOL, "petal_pickaxe", "Petal Pickaxe", 300, null),
     AMETHYST_AXE(Category.TOOL, "blossom_axe", "Blossom Axe", 250, null),
 

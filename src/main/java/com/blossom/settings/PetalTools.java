@@ -45,9 +45,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * The custom tools sold in /petalsshop.
- *  - Blossom Pickaxe:  Haste + mines a 3x3 area
+ *  - Blossom Pickaxe:  mines a 3x3 area
  *  - Petal Pickaxe:    Haste + auto-smelts what it mines
- *  - Blossom Axe:      Haste + chops a 3x3 area
+ *  - Blossom Axe:      chops wood faster (block break speed bonus)
  */
 public final class PetalTools implements Listener {
 
@@ -102,7 +102,35 @@ public final class PetalTools implements Listener {
         meta.getPersistentDataContainer().set(expiresKey, PersistentDataType.LONG, expires);
         meta.lore(lore(s, expires));
         item.setItemMeta(meta);
+        if (s == ShopItem.AMETHYST_AXE) addAxeSpeed(item);
         return item;
+    }
+
+    private double axeBonus() {
+        return Math.max(0, plugin.getConfig().getDouble("tools.axe-speed-bonus", 0.5));
+    }
+
+    /**
+     * Makes the axe break blocks faster. Adding any attribute replaces the item's normal
+     * attack stats, so the netherite axe's damage (10) and speed (1.0) are added back too.
+     */
+    private void addAxeSpeed(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta.hasAttributeModifiers() && meta.getAttributeModifiers(org.bukkit.attribute.Attribute.BLOCK_BREAK_SPEED) != null
+                && !meta.getAttributeModifiers(org.bukkit.attribute.Attribute.BLOCK_BREAK_SPEED).isEmpty()) {
+            return; // already has it
+        }
+        org.bukkit.inventory.EquipmentSlotGroup hand = org.bukkit.inventory.EquipmentSlotGroup.MAINHAND;
+        meta.addAttributeModifier(org.bukkit.attribute.Attribute.BLOCK_BREAK_SPEED, new org.bukkit.attribute.AttributeModifier(
+                new NamespacedKey(plugin, "axe_speed"), axeBonus(),
+                org.bukkit.attribute.AttributeModifier.Operation.ADD_SCALAR, hand));
+        meta.addAttributeModifier(org.bukkit.attribute.Attribute.ATTACK_DAMAGE, new org.bukkit.attribute.AttributeModifier(
+                new NamespacedKey(plugin, "axe_damage"), 9.0,
+                org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER, hand));
+        meta.addAttributeModifier(org.bukkit.attribute.Attribute.ATTACK_SPEED, new org.bukkit.attribute.AttributeModifier(
+                new NamespacedKey(plugin, "axe_attack_speed"), -3.0,
+                org.bukkit.attribute.AttributeModifier.Operation.ADD_NUMBER, hand));
+        item.setItemMeta(meta);
     }
 
     private List<Component> lore(ShopItem s, long expires) {
@@ -111,9 +139,9 @@ public final class PetalTools implements Listener {
             lore.add(line("✦ Auto-smelts what you mine"));
             lore.add(line("✦ Ores, cobblestone, sand and more"));
         } else if (s == ShopItem.AMETHYST_AXE) {
-            lore.add(line("✦ Chops a 3x3 area"));
+            lore.add(line("✦ Chops " + Math.round(axeBonus() * 100) + "% faster"));
         } else {
-            lore.add(line("✦ Retired tool"));
+            lore.add(line("✦ Mines a 3x3 area"));
         }
         lore.add(line("✦ Enchant it however you like"));
         lore.add(Component.empty());
@@ -180,6 +208,7 @@ public final class PetalTools implements Listener {
                 p.sendMessage(Component.text("Your " + kind.displayName + " ran out after 24 hours.", NamedTextColor.RED));
                 p.playSound(p.getLocation(), Sound.ENTITY_ITEM_BREAK, 1f, 1f);
             } else {
+                if (kind == ShopItem.AMETHYST_AXE) addAxeSpeed(item);
                 p.getInventory().setItem(slot, item);
             }
         }
@@ -220,8 +249,8 @@ public final class PetalTools implements Listener {
             return;
         }
 
-        // Only the Blossom Axe breaks 3x3 now (the 3x3 pickaxe was retired)
-        if (kind != ShopItem.AMETHYST_AXE) return;
+        // Only the Blossom Pickaxe breaks 3x3 (the axe just chops faster)
+        if (kind != ShopItem.AMETHYST_PICKAXE) return;
 
         // 3x3: work out which face the player is mining
         RayTraceResult hit = p.rayTraceBlocks(6.0, FluidCollisionMode.NEVER);
