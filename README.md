@@ -2,7 +2,12 @@
 
 - /settings menu: mob spawns, phantoms, night vision, money nametags
 - Petals = the server money (same balance as /bal from BlossomEconomy)
-- /petalsshop: Blossom Pickaxe (3x3), Petal Pickaxe (auto-smelt), Blossom Axe (3x3), spawners
-- Old Petals from petals.yml are added to each player's balance once on startup
+- **Shards** (/shards): the /ps currency. Earned by playing (not AFK), killing mobs/players, and /daily
+- **/ps** (/petalsshop): 24-hour Petal Pickaxe (auto-smelt) and Blossom Axe (3x3), plus spawners
+- **DonutSMP-style spawners**: no mobs, they store drops + XP. Right-click to collect, sell (into Petals),
+  take XP, or upgrade speed/storage with Shards. Right-click with the same type to stack (sneak = whole hand).
+  Silk Touch picks the whole stack up. Owner only. Safe from explosions.
 
-Placeholders: `%blossomsettings_petals%`, `%blossomsettings_petals_short%`, `%blossomsettings_petals_formatted%`
+Admin: `/shards give|take|set|check <player> [amount]`, perms `blossomsettings.shards.admin`, `blossomsettings.spawners.admin`
+
+Placeholders: `%blossomsettings_shards%`, `%blossomsettings_shards_formatted%`, `%blossomsettings_petals%`

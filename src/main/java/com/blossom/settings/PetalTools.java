@@ -29,8 +29,6 @@ import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.RayTraceResult;
 
@@ -53,6 +51,12 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class PetalTools implements Listener {
 
+    private static final Set<Material> NEVER_BREAK = java.util.EnumSet.of(
+            Material.BEDROCK, Material.BARRIER, Material.END_PORTAL_FRAME, Material.END_PORTAL,
+            Material.NETHER_PORTAL, Material.END_GATEWAY, Material.REINFORCED_DEEPSLATE,
+            Material.COMMAND_BLOCK, Material.CHAIN_COMMAND_BLOCK, Material.REPEATING_COMMAND_BLOCK,
+            Material.STRUCTURE_BLOCK, Material.JIGSAW, Material.LIGHT, Material.SPAWNER);
+
     public static final TextColor AMETHYST = TextColor.color(0xFF69B4); // blossom pink
     private static final TextColor LIGHT_PINK = TextColor.color(0xFFB6C1);
 
@@ -60,69 +64,76 @@ public final class PetalTools implements Listener {
     private final NamespacedKey toolKey;
     private final Set<UUID> busy = new HashSet<>();
     private final Map<Material, ItemStack> smelts = new HashMap<>();
-    private BukkitTask hasteTask;
+    private final NamespacedKey expiresKey;
+    private BukkitTask expiryTask;
 
     public PetalTools(BlossomSettings plugin) {
         this.plugin = plugin;
         this.toolKey = new NamespacedKey(plugin, "petal_tool");
+        this.expiresKey = new NamespacedKey(plugin, "expires_at");
     }
 
     public void start() {
         loadSmelts();
-        hasteTask = Bukkit.getScheduler().runTaskTimer(plugin, this::hasteTick, 20L, 20L);
+        // Every 30 seconds: update the "time left" line and remove tools that ran out
+        expiryTask = Bukkit.getScheduler().runTaskTimer(plugin, this::expiryTick, 40L, 600L);
     }
 
     public void stop() {
-        if (hasteTask != null) hasteTask.cancel();
+        if (expiryTask != null) expiryTask.cancel();
+    }
+
+    private long lifetimeMs() {
+        return Math.max(1, plugin.getConfig().getLong("tools.lifetime-hours", 24)) * 3_600_000L;
     }
 
     /* ---------------- Item creation / detection ---------------- */
 
+    /** Makes a fresh tool. Its 24-hour timer starts now. No enchants: players add their own. */
     public ItemStack createTool(ShopItem s) {
         Material base = s == ShopItem.AMETHYST_AXE ? Material.NETHERITE_AXE : Material.NETHERITE_PICKAXE;
         ItemStack item = new ItemStack(base);
         ItemMeta meta = item.getItemMeta();
-
         meta.displayName(Component.text("✿ " + s.displayName + " ✿", AMETHYST)
                 .decoration(TextDecoration.ITALIC, false)
                 .decoration(TextDecoration.BOLD, true));
+        meta.getPersistentDataContainer().set(toolKey, PersistentDataType.STRING, s.name());
+        long expires = System.currentTimeMillis() + lifetimeMs();
+        meta.getPersistentDataContainer().set(expiresKey, PersistentDataType.LONG, expires);
+        meta.lore(lore(s, expires));
+        item.setItemMeta(meta);
+        return item;
+    }
 
-        int haste = Math.max(1, plugin.getConfig().getInt("petals-shop.haste-level", 2));
+    private List<Component> lore(ShopItem s, long expires) {
         List<Component> lore = new ArrayList<>();
-        lore.add(line("✦ Haste " + roman(haste) + " while held"));
         if (s == ShopItem.AMETHYST_SMELTER) {
             lore.add(line("✦ Auto-smelts what you mine"));
-            lore.add(line("✦ Ores, logs, sand and more"));
+            lore.add(line("✦ Ores, cobblestone, sand and more"));
         } else if (s == ShopItem.AMETHYST_AXE) {
             lore.add(line("✦ Chops a 3x3 area"));
         } else {
-            lore.add(line("✦ Mines a 3x3 area"));
+            lore.add(line("✦ Retired tool"));
         }
-        meta.lore(lore);
+        lore.add(line("✦ Enchant it however you like"));
+        lore.add(Component.empty());
+        long left = expires - System.currentTimeMillis();
+        lore.add(Component.text("⌚ Disappears in " + timeLeft(left), NamedTextColor.YELLOW)
+                .decoration(TextDecoration.ITALIC, false));
+        return lore;
+    }
 
-        meta.addEnchant(Enchantment.EFFICIENCY, 5, true);
-        meta.addEnchant(Enchantment.UNBREAKING, 3, true);
-        meta.addEnchant(Enchantment.MENDING, 1, true);
-        meta.getPersistentDataContainer().set(toolKey, PersistentDataType.STRING, s.name());
-        item.setItemMeta(meta);
-        return item;
+    private static String timeLeft(long ms) {
+        long minutes = Math.max(0, ms) / 60_000L;
+        long hours = minutes / 60;
+        return hours > 0 ? hours + "h " + (minutes % 60) + "m" : Math.max(1, minutes) + "m";
     }
 
     private static Component line(String text) {
         return Component.text(text, LIGHT_PINK).decoration(TextDecoration.ITALIC, false);
     }
 
-    private static String roman(int n) {
-        return switch (n) {
-            case 1 -> "I";
-            case 2 -> "II";
-            case 3 -> "III";
-            case 4 -> "IV";
-            default -> "V";
-        };
-    }
-
-    /** Returns which Amethyst tool this is, or null for any other item. */
+    /** Returns which Blossom tool this is, or null for any other item. */
     public ShopItem toolOf(ItemStack item) {
         if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) return null;
         String id = item.getItemMeta().getPersistentDataContainer().get(toolKey, PersistentDataType.STRING);
@@ -134,15 +145,43 @@ public final class PetalTools implements Listener {
         }
     }
 
-    /* ---------------- Haste ---------------- */
+    /* ---------------- 24-hour timer ---------------- */
 
-    private void hasteTick() {
-        int amp = Math.max(0, plugin.getConfig().getInt("petals-shop.haste-level", 2) - 1);
+    /** True if this tool has run out. Tools from before the timer existed get 24 hours from now. */
+    private boolean expired(ItemStack item, ShopItem kind) {
+        ItemMeta meta = item.getItemMeta();
+        Long expires = meta.getPersistentDataContainer().get(expiresKey, PersistentDataType.LONG);
+        if (expires == null) {
+            expires = System.currentTimeMillis() + lifetimeMs();
+            meta.getPersistentDataContainer().set(expiresKey, PersistentDataType.LONG, expires);
+        }
+        if (System.currentTimeMillis() >= expires) {
+            return true;
+        }
+        meta.lore(lore(kind, expires));
+        item.setItemMeta(meta);
+        return false;
+    }
+
+    private void expiryTick() {
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (toolOf(p.getInventory().getItemInMainHand()) == null) continue;
-            PotionEffect current = p.getPotionEffect(PotionEffectType.HASTE);
-            if (current != null && current.getAmplifier() > amp) continue;
-            p.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 60, amp, true, false, false));
+            checkInventory(p);
+        }
+    }
+
+    private void checkInventory(Player p) {
+        ItemStack[] contents = p.getInventory().getContents();
+        for (int slot = 0; slot < contents.length; slot++) {
+            ItemStack item = contents[slot];
+            ShopItem kind = toolOf(item);
+            if (kind == null) continue;
+            if (expired(item, kind)) {
+                p.getInventory().setItem(slot, null);
+                p.sendMessage(Component.text("Your " + kind.displayName + " ran out after 24 hours.", NamedTextColor.RED));
+                p.playSound(p.getLocation(), Sound.ENTITY_ITEM_BREAK, 1f, 1f);
+            } else {
+                p.getInventory().setItem(slot, item);
+            }
         }
     }
 
@@ -157,6 +196,13 @@ public final class PetalTools implements Listener {
         ItemStack tool = p.getInventory().getItemInMainHand();
         ShopItem kind = toolOf(tool);
         if (kind == null) return;
+        if (expired(tool, kind)) {
+            e.setCancelled(true);
+            p.getInventory().setItemInMainHand(null);
+            p.sendMessage(Component.text("Your " + kind.displayName + " ran out after 24 hours.", NamedTextColor.RED));
+            p.playSound(p.getLocation(), Sound.ENTITY_ITEM_BREAK, 1f, 1f);
+            return;
+        }
 
         Block origin = e.getBlock();
 
@@ -174,7 +220,10 @@ public final class PetalTools implements Listener {
             return;
         }
 
-        // 3x3 tools: work out which face the player is mining
+        // Only the Blossom Axe breaks 3x3 now (the 3x3 pickaxe was retired)
+        if (kind != ShopItem.AMETHYST_AXE) return;
+
+        // 3x3: work out which face the player is mining
         RayTraceResult hit = p.rayTraceBlocks(6.0, FluidCollisionMode.NEVER);
         if (hit == null || hit.getHitBlockFace() == null || !origin.equals(hit.getHitBlock())) return;
 
@@ -199,6 +248,7 @@ public final class PetalTools implements Listener {
 
                 Material type = target.getType();
                 if (type.isAir() || type.getHardness() < 0 || target.isLiquid()) continue;
+                if (NEVER_BREAK.contains(type)) continue; // bedrock, portals, barriers...
                 if (target.getState() instanceof TileState) continue; // chests, spawners, signs...
                 if (!target.isPreferredTool(tool)) continue;
 

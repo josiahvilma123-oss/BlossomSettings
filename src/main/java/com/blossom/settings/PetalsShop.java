@@ -7,7 +7,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -16,7 +15,6 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
@@ -24,7 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** /petalsshop: custom tools on top, spawners below. Click an item to buy it. */
+/** /ps (/petalsshop): 24-hour tools on top, spawners below, paid with Shards. */
 public final class PetalsShop implements Listener {
 
     private static final TextColor PINK = TextColor.color(0xFF69B4);
@@ -79,7 +77,7 @@ public final class PetalsShop implements Listener {
         buildLayout();
         ShopHolder holder = new ShopHolder();
         Inventory inv = Bukkit.createInventory(holder, 54,
-                Component.text("Petals Shop", PINK).decoration(TextDecoration.BOLD, true));
+                Component.text("✦ Shard Shop", PINK).decoration(TextDecoration.BOLD, true));
         holder.inventory = inv;
 
         ItemStack filler = new ItemStack(Material.PINK_STAINED_GLASS_PANE);
@@ -91,7 +89,7 @@ public final class PetalsShop implements Listener {
         }
 
         inv.setItem(BALANCE_SLOT, balanceItem(player));
-        inv.setItem(TOOLS_LABEL_SLOT, label(Material.PINK_PETALS, "Blossom Tools", PetalTools.AMETHYST));
+        inv.setItem(TOOLS_LABEL_SLOT, label(Material.CLOCK, "24-Hour Tools", PetalTools.AMETHYST));
         inv.setItem(SPAWNERS_LABEL_SLOT, label(Material.SPAWNER, "Spawners", NamedTextColor.GREEN));
 
         for (Map.Entry<Integer, ShopItem> e : layout.entrySet()) {
@@ -113,15 +111,15 @@ public final class PetalsShop implements Listener {
     }
 
     private ItemStack balanceItem(Player player) {
-        ItemStack item = new ItemStack(Material.PINK_DYE);
+        ItemStack item = new ItemStack(Material.PRISMARINE_CRYSTALS);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Your Petals: ", NamedTextColor.WHITE)
+        meta.displayName(Component.text("Your Shards: ", NamedTextColor.WHITE)
                 .decoration(TextDecoration.ITALIC, false)
-                .append(Component.text(plugin.petals().format(plugin.petals().get(player.getUniqueId())), PINK)));
+                .append(Component.text("✦ " + ShardsManager.format(plugin.shards().get(player.getUniqueId())), ShardsCommand.AQUA)));
         meta.lore(List.of(
-                Component.text("Same Petals as /bal", NamedTextColor.GRAY)
+                Component.text("Earn Shards by playing, killing", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
-                Component.text("Earn them with /sell, jobs, kills and /daily", NamedTextColor.GRAY)
+                Component.text("mobs and players, and from /daily", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)));
         item.setItemMeta(meta);
         return item;
@@ -132,15 +130,7 @@ public final class PetalsShop implements Listener {
         if (s.category == ShopItem.Category.TOOL) {
             return plugin.tools().createTool(s);
         }
-        ItemStack item = new ItemStack(Material.SPAWNER);
-        BlockStateMeta meta = (BlockStateMeta) item.getItemMeta();
-        CreatureSpawner spawner = (CreatureSpawner) meta.getBlockState();
-        spawner.setSpawnedType(s.entity);
-        meta.setBlockState(spawner);
-        meta.displayName(Component.text(s.displayName, NamedTextColor.GREEN)
-                .decoration(TextDecoration.ITALIC, false));
-        item.setItemMeta(meta);
-        return item;
+        return plugin.spawners().createItem(s.entity, 1);
     }
 
     /** What shows in the menu: the item plus its price. */
@@ -151,7 +141,7 @@ public final class PetalsShop implements Listener {
         lore.add(Component.empty());
         lore.add(Component.text("Price: ", NamedTextColor.GRAY)
                 .decoration(TextDecoration.ITALIC, false)
-                .append(Component.text(plugin.petals().format(plugin.price(s)), PINK)));
+                .append(Component.text("✦ " + ShardsManager.format(plugin.price(s)), ShardsCommand.AQUA)));
         lore.add(Component.text("Click to buy", NamedTextColor.YELLOW)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(lore);
@@ -188,25 +178,25 @@ public final class PetalsShop implements Listener {
             return;
         }
 
-        long balance = plugin.petals().get(player.getUniqueId());
+        long balance = plugin.shards().get(player.getUniqueId());
         if (balance < price) {
-            player.sendMessage(Component.text("You need " + plugin.petals().format(price - balance) + " more for that.",
+            player.sendMessage(Component.text("You need " + ShardsManager.format(price - balance) + " more for that.",
                     NamedTextColor.RED));
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 1f);
             return;
         }
 
-        if (!plugin.petals().withdraw(player.getUniqueId(), price)) {
-            player.sendMessage(Component.text("Something went wrong taking your Petals. Try again.", NamedTextColor.RED));
+        if (!plugin.shards().withdraw(player.getUniqueId(), price)) {
+            player.sendMessage(Component.text("Something went wrong taking your Shards. Try again.", NamedTextColor.RED));
             return;
         }
         player.getInventory().addItem(giveItem(item));
-        plugin.petals().save();
+        plugin.shards().save();
 
         top.setItem(BALANCE_SLOT, balanceItem(player));
         player.sendMessage(Component.text("Bought ", NamedTextColor.GREEN)
                 .append(Component.text(item.displayName, NamedTextColor.WHITE))
-                .append(Component.text(" for " + plugin.petals().format(price) + ".", NamedTextColor.GREEN)));
+                .append(Component.text(" for " + ShardsManager.format(price) + ".", NamedTextColor.GREEN)));
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.7f, 1.4f);
     }
 

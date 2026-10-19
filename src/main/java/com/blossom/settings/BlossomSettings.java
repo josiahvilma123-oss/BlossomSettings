@@ -23,12 +23,17 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
     private PetalsEarner earner;
     private PetalTools tools;
     private PetalsShop shop;
+    private ShardsManager shards;
+    private SpawnerManager spawners;
     private Economy economy;
     private boolean warnedNoEconomy = false;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        // Add any new settings (shards, spawners...) to an older config.yml without touching your changes
+        getConfig().options().copyDefaults(true);
+        saveConfig();
 
         settings = new SettingsManager(this);
         settings.load();
@@ -47,6 +52,17 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
         // Petals: currency, earning, custom tools and the shop
         petals = new PetalsManager(this);
         petals.load();
+        shards = new ShardsManager(this);
+        shards.load();
+        spawners = new SpawnerManager(this);
+        getServer().getPluginManager().registerEvents(spawners, this);
+        getServer().getPluginManager().registerEvents(new SpawnerMenu(this), this);
+        ShardsCommand shardsCommand = new ShardsCommand(this);
+        PluginCommand shardsCmd = getCommand("shards");
+        if (shardsCmd != null) {
+            shardsCmd.setExecutor(shardsCommand);
+            shardsCmd.setTabCompleter(shardsCommand);
+        }
         earner = new PetalsEarner(this);
         tools = new PetalTools(this);
         shop = new PetalsShop(this);
@@ -64,8 +80,9 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
         }
         earner.start();
         tools.start();
+        spawners.start();
         // Save balances every 5 minutes as a safety net
-        getServer().getScheduler().runTaskTimer(this, () -> petals.save(), 6000L, 6000L);
+        getServer().getScheduler().runTaskTimer(this, () -> shards.save(), 6000L, 6000L);
 
         nametags.start();
 
@@ -86,6 +103,8 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
         if (nametags != null) nametags.stop();
         if (earner != null) earner.stop();
         if (tools != null) tools.stop();
+        if (spawners != null) spawners.stop();
+        if (shards != null) shards.save();
         if (settings != null) settings.save();
         if (petals != null) petals.save();
     }
@@ -100,6 +119,7 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
             reloadConfig();
             features.loadConfig();
             nametags.reload();
+            spawners.reload();
             sender.sendMessage("BlossomSettings config reloaded.");
             return true;
         }
@@ -171,12 +191,20 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
         return petals;
     }
 
+    public ShardsManager shards() {
+        return shards;
+    }
+
+    public SpawnerManager spawners() {
+        return spawners;
+    }
+
     public PetalTools tools() {
         return tools;
     }
 
     /** Shop price in Petals, from config.yml shop-prices (falls back to the built-in default). */
     public long price(ShopItem item) {
-        return getConfig().getLong("shop-prices." + item.id, item.defaultPrice);
+        return getConfig().getLong("shard-prices." + item.id, item.defaultPrice);
     }
 }

@@ -7,6 +7,8 @@ import org.bukkit.OfflinePlayer;
  * %blossomsettings_petals%           -> 1250
  * %blossomsettings_petals_short%     -> 1.3K
  * %blossomsettings_petals_formatted% -> 1,250
+ * %blossomsettings_shards%           -> 340
+ * %blossomsettings_shards_formatted% -> 1,340
  */
 public final class PetalsPlaceholders extends PlaceholderExpansion {
 
@@ -41,8 +43,13 @@ public final class PetalsPlaceholders extends PlaceholderExpansion {
         if (player == null) {
             return "0";
         }
+        String p = params.toLowerCase();
+        if (p.startsWith("shards")) {
+            long shards = plugin.shards().get(player.getUniqueId());
+            return p.equals("shards_formatted") ? String.format(java.util.Locale.US, "%,d", shards) : String.valueOf(shards);
+        }
         long petals = plugin.petals().get(player.getUniqueId());
-        return switch (params.toLowerCase()) {
+        return switch (p) {
             case "petals" -> String.valueOf(petals);
             case "petals_short" -> MoneyNametags.formatMoney(petals);
             case "petals_formatted" -> String.format(java.util.Locale.US, "%,d", petals);

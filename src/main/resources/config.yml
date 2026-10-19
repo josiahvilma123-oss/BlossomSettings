@@ -14,41 +14,77 @@ mob-spawns:
     - MOUNT
     - PATROL
 
-petals:
-  # Bonus Petals (added to /bal) for time played. Only minutes where the player actually moved count,
-  # so standing AFK earns nothing.
+shards:
+  # Shards are the /ps currency. Players earn them by playing (not AFK),
+  # killing mobs and players, and from /daily (set in BlossomEconomy).
   playtime:
+    # Only minutes where the player actually moved count
     minutes: 10
     amount: 10
-  # Petals per hostile mob kill. Mobs from spawners and spawn eggs pay nothing,
-  # so spawner farms can't print Petals. Set to 0 to turn off.
+  # Mobs from spawners and spawn eggs pay nothing
   kill-hostile-mob:
     amount: 1
-  # Petals per player kill. Killing the same player again within the cooldown
-  # pays nothing, so friends can't trade kills.
+  # Killing the same player again within the cooldown pays nothing
   kill-player:
-    amount: 20
+    amount: 15
     same-victim-cooldown-minutes: 30
 
-petals-shop:
-  # Haste level on the Blossom tools while held (1-5).
-  haste-level: 2
+# /ps prices in Shards. Set a price to 0 to hide that item.
+shard-prices:
+  blossom_pickaxe: 0          # old 3x3 pickaxe (retired)
+  petal_pickaxe: 300          # auto-smelts, lasts 24 hours
+  blossom_axe: 250            # chops 3x3, lasts 24 hours
+  cow_spawner: 300
+  pig_spawner: 300
+  sheep_spawner: 300
+  zombie_spawner: 500
+  skeleton_spawner: 500
+  spider_spawner: 500
+  iron_golem_spawner: 900
+  blaze_spawner: 1000
+  enderman_spawner: 1000
 
-# Prices in /petalsshop. Petals are the same as your /bal now.
-# Set a price to 0 to hide that item from the shop.
-shop-prices:
-  blossom_pickaxe: 150000     # mines 3x3
-  petal_pickaxe: 150000       # auto-smelts
-  blossom_axe: 100000         # chops 3x3
-  cow_spawner: 25000
-  pig_spawner: 25000
-  sheep_spawner: 25000
-  zombie_spawner: 50000
-  skeleton_spawner: 50000
-  spider_spawner: 50000
-  iron_golem_spawner: 100000
-  blaze_spawner: 120000
-  enderman_spawner: 120000
+tools:
+  # How long the /ps pickaxe and axe last before they disappear
+  lifetime-hours: 24
+
+spawners:
+  enabled: true
+  # Most spawners you can stack into one block
+  max-stack: 64
+  # Seconds between drops (before speed upgrades)
+  base-interval-seconds: 30
+  # Items each spawner in the stack can hold (before storage upgrades)
+  base-storage: 512
+  base-xp-storage: 1000
+  xp-per-mob: 3
+  # Picking up a spawner needs a Silk Touch pickaxe (without it, nothing happens)
+  needs-silk-touch: true
+  upgrades:
+    # Shard cost of level 1, 2, 3
+    speed-costs: [250, 500, 1000]
+    # Drop time is multiplied by this at level 1, 2, 3 (0.5 = twice as fast)
+    speed-multipliers: [0.8, 0.65, 0.5]
+    storage-costs: [200, 400, 800]
+    # Storage is multiplied by this at level 1, 2, 3
+    storage-multipliers: [2, 3, 5]
+  # What each mob drops per cycle: "ITEM min max [chance%]"
+  loot:
+    COW: ["BEEF 1 3", "LEATHER 0 2"]
+    PIG: ["PORKCHOP 1 3"]
+    SHEEP: ["MUTTON 1 2", "WHITE_WOOL 1 1"]
+    CHICKEN: ["CHICKEN 1 1", "FEATHER 0 2"]
+    ZOMBIE: ["ROTTEN_FLESH 0 2", "IRON_INGOT 1 1 2.5"]
+    SKELETON: ["BONE 0 2", "ARROW 0 2"]
+    SPIDER: ["STRING 0 2", "SPIDER_EYE 1 1 33"]
+    CAVE_SPIDER: ["STRING 0 2", "SPIDER_EYE 1 1 33"]
+    CREEPER: ["GUNPOWDER 0 2"]
+    IRON_GOLEM: ["IRON_INGOT 3 5", "POPPY 0 2"]
+    BLAZE: ["BLAZE_ROD 0 1"]
+    ENDERMAN: ["ENDER_PEARL 0 1"]
+    MAGMA_CUBE: ["MAGMA_CREAM 0 1"]
+    SILVERFISH: []
+    WITCH: ["REDSTONE 0 2", "GLOWSTONE_DUST 0 2", "SUGAR 0 2"]
 
 money-nametags:
   # MiniMessage format. <balance> is replaced with the short balance (3.9K, 1.2M...)
