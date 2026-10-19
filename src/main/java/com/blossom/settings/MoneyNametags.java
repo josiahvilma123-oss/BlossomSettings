@@ -40,7 +40,7 @@ public final class MoneyNametags {
     private int interval = 2;
     private int refreshRuns = 10;
     private double heightOffset = 0.75;
-    private String format = "<green>$</green> <white><balance></white>";
+    private String format = "<#FF69B4>✿</#FF69B4> <white><balance></white>";
 
     public MoneyNametags(BlossomSettings plugin) {
         this.plugin = plugin;
@@ -52,7 +52,7 @@ public final class MoneyNametags {
         int refreshTicks = Math.max(interval, cfg.getInt("money-nametags.balance-refresh-ticks", 20));
         refreshRuns = Math.max(1, refreshTicks / interval);
         heightOffset = cfg.getDouble("money-nametags.height-offset", 0.75);
-        format = cfg.getString("money-nametags.format", format);
+        format = cfg.getString("money-nametags.petals-format", "<#FF69B4>✿</#FF69B4> <white><balance></white>");
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, interval);
     }
 

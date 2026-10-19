@@ -14,9 +14,45 @@ mob-spawns:
     - MOUNT
     - PATROL
 
+petals:
+  # Bonus Petals (added to /bal) for time played. Only minutes where the player actually moved count,
+  # so standing AFK earns nothing.
+  playtime:
+    minutes: 10
+    amount: 10
+  # Petals per hostile mob kill. Mobs from spawners and spawn eggs pay nothing,
+  # so spawner farms can't print Petals. Set to 0 to turn off.
+  kill-hostile-mob:
+    amount: 1
+  # Petals per player kill. Killing the same player again within the cooldown
+  # pays nothing, so friends can't trade kills.
+  kill-player:
+    amount: 20
+    same-victim-cooldown-minutes: 30
+
+petals-shop:
+  # Haste level on the Blossom tools while held (1-5).
+  haste-level: 2
+
+# Prices in /petalsshop. Petals are the same as your /bal now.
+# Set a price to 0 to hide that item from the shop.
+shop-prices:
+  blossom_pickaxe: 150000     # mines 3x3
+  petal_pickaxe: 150000       # auto-smelts
+  blossom_axe: 100000         # chops 3x3
+  cow_spawner: 25000
+  pig_spawner: 25000
+  sheep_spawner: 25000
+  zombie_spawner: 50000
+  skeleton_spawner: 50000
+  spider_spawner: 50000
+  iron_golem_spawner: 100000
+  blaze_spawner: 120000
+  enderman_spawner: 120000
+
 money-nametags:
   # MiniMessage format. <balance> is replaced with the short balance (3.9K, 1.2M...)
-  format: "<green>$</green> <white><balance></white>"
+  petals-format: "<#FF69B4>✿</#FF69B4> <white><balance></white>"
   # How far above the player's head the line floats. Raise it if it overlaps
   # the vanilla name, lower it to sit closer.
   height-offset: 0.75

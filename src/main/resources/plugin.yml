@@ -2,14 +2,22 @@ name: BlossomSettings
 version: '${project.version}'
 main: com.blossom.settings.BlossomSettings
 api-version: '1.21'
-description: Per-player settings menu with mob/phantom toggles, night vision and money nametags.
-softdepend: [Vault]
+description: Settings menu, money nametags, and the Petals currency with /petalsshop.
+softdepend: [Vault, PlaceholderAPI, BlossomEconomy]
 
 commands:
   settings:
     description: Open the settings menu
     aliases: [toggles, prefs]
     permission: blossomsettings.use
+  petalsshop:
+    description: Open the Petals shop
+    aliases: [ps, petalshop, pshop]
+    permission: blossomsettings.petalsshop
+  petals:
+    description: Check your Petals (admins can give, take, set)
+    aliases: [petal]
+    permission: blossomsettings.petals
 
 permissions:
   blossomsettings.use:
@@ -17,4 +25,13 @@ permissions:
     default: true
   blossomsettings.reload:
     description: Reload the BlossomSettings config
+    default: op
+  blossomsettings.petalsshop:
+    description: Open the Petals shop
+    default: true
+  blossomsettings.petals:
+    description: Check your Petals balance
+    default: true
+  blossomsettings.petals.admin:
+    description: Give, take, set and check other players' Petals
     default: op

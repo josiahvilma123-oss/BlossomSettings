@@ -4,11 +4,14 @@ import net.milkbowl.vault.economy.Economy;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+
+import java.util.List;
 
 public final class BlossomSettings extends JavaPlugin implements CommandExecutor {
 
@@ -16,6 +19,10 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
     private SettingsMenu menu;
     private MoneyNametags nametags;
     private FeatureListener features;
+    private PetalsManager petals;
+    private PetalsEarner earner;
+    private PetalTools tools;
+    private PetalsShop shop;
     private Economy economy;
     private boolean warnedNoEconomy = false;
 
@@ -37,7 +44,36 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
             getCommand("settings").setExecutor(this);
         }
 
+        // Petals: currency, earning, custom tools and the shop
+        petals = new PetalsManager(this);
+        petals.load();
+        earner = new PetalsEarner(this);
+        tools = new PetalTools(this);
+        shop = new PetalsShop(this);
+        getServer().getPluginManager().registerEvents(earner, this);
+        getServer().getPluginManager().registerEvents(tools, this);
+        getServer().getPluginManager().registerEvents(shop, this);
+
+        PetalsCommand petalsCommand = new PetalsCommand(this, shop);
+        for (String name : List.of("petals", "petalsshop")) {
+            PluginCommand cmd = getCommand(name);
+            if (cmd != null) {
+                cmd.setExecutor(petalsCommand);
+                cmd.setTabCompleter(petalsCommand);
+            }
+        }
+        earner.start();
+        tools.start();
+        // Save balances every 5 minutes as a safety net
+        getServer().getScheduler().runTaskTimer(this, () -> petals.save(), 6000L, 6000L);
+
         nametags.start();
+
+        // %blossomsettings_petals% for TAB, holograms, etc.
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new PetalsPlaceholders(this).register();
+            getLogger().info("Hooked into PlaceholderAPI (%blossomsettings_petals%).");
+        }
 
         // Re-apply night vision for anyone already online (e.g. after /reload)
         for (Player p : getServer().getOnlinePlayers()) {
@@ -48,7 +84,10 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
     @Override
     public void onDisable() {
         if (nametags != null) nametags.stop();
+        if (earner != null) earner.stop();
+        if (tools != null) tools.stop();
         if (settings != null) settings.save();
+        if (petals != null) petals.save();
     }
 
     @Override
@@ -116,7 +155,7 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
     private void warnNoEconomy(String reason) {
         if (!warnedNoEconomy) {
             warnedNoEconomy = true;
-            getLogger().warning("Money nametags are waiting: " + reason + ".");
+            getLogger().warning("Petals are waiting for the economy: " + reason + ".");
         }
     }
 
@@ -126,5 +165,18 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
 
     public MoneyNametags nametags() {
         return nametags;
+    }
+
+    public PetalsManager petals() {
+        return petals;
+    }
+
+    public PetalTools tools() {
+        return tools;
+    }
+
+    /** Shop price in Petals, from config.yml shop-prices (falls back to the built-in default). */
+    public long price(ShopItem item) {
+        return getConfig().getLong("shop-prices." + item.id, item.defaultPrice);
     }
 }
