@@ -141,7 +141,8 @@ public final class PetalTools implements Listener {
         } else if (s == ShopItem.AMETHYST_AXE) {
             lore.add(line("✦ Chops " + Math.round(axeBonus() * 100) + "% faster"));
         } else {
-            lore.add(line("✦ Mines a 3x3 area"));
+            lore.add(line("✦ Mines 3x3 forward and sideways"));
+            lore.add(line("✦ Digs straight down 3 blocks"));
         }
         lore.add(line("✦ Enchant it however you like"));
         lore.add(Component.empty());
@@ -264,21 +265,67 @@ public final class PetalTools implements Listener {
         }
     }
 
+    /**
+     * Which blocks the Blossom Pickaxe breaks (sizes come from config.yml, tools.pickaxe):
+     *  - looking down:              straight down, down-width wide and down-depth deep (default 1 wide, 3 deep)
+     *  - looking forward/sideways:  forward-width x forward-height (default 3x3)
+     *  - looking up:                forward-width x forward-width ceiling, 1 thick
+     */
+    private List<Block> area(Player p, Block origin, BlockFace face) {
+        int fw = clampSize(plugin.getConfig().getInt("tools.pickaxe.forward-width", 3));
+        int fh = Math.max(1, Math.min(5, plugin.getConfig().getInt("tools.pickaxe.forward-height", 3)));
+        int dw = clampSize(plugin.getConfig().getInt("tools.pickaxe.down-width", 1));
+        int depth = Math.max(1, Math.min(5, plugin.getConfig().getInt("tools.pickaxe.down-depth", 3)));
+        List<Block> out = new ArrayList<>();
+        switch (face) {
+            case UP -> { // looking down at the top of a block
+                int r = dw / 2;
+                for (int dy = 0; dy > -depth; dy--)
+                    for (int dx = -r; dx <= r; dx++)
+                        for (int dz = -r; dz <= r; dz++)
+                            out.add(origin.getRelative(dx, dy, dz));
+            }
+            case DOWN -> { // looking up at a ceiling
+                int r = fw / 2;
+                for (int dx = -r; dx <= r; dx++)
+                    for (int dz = -r; dz <= r; dz++)
+                        out.add(origin.getRelative(dx, 0, dz));
+            }
+            default -> { // a wall in front or to the side
+                int r = fw / 2;
+                boolean alongX = face == BlockFace.NORTH || face == BlockFace.SOUTH;
+                for (int w = -r; w <= r; w++) {
+                    for (int dy : rows(p, origin, fh)) {
+                        out.add(alongX ? origin.getRelative(w, dy, 0) : origin.getRelative(0, dy, w));
+                    }
+                }
+            }
+        }
+        out.remove(origin); // the game already breaks this one
+        return out;
+    }
+
+    /** Sizes are 1, 3 or 5 so the area stays centred on the block you mine. */
+    private static int clampSize(int n) {
+        n = Math.max(1, Math.min(5, n));
+        return n % 2 == 0 ? n + 1 : n;
+    }
+
+    /** Height rows for a wall. 2 tall = feet + head height, so you can walk through. */
+    private static int[] rows(Player p, Block origin, int height) {
+        if (height >= 5) return new int[]{-2, -1, 0, 1, 2};
+        if (height == 3) return new int[]{-1, 0, 1};
+        if (height == 2) return new int[]{0, origin.getY() > p.getLocation().getBlockY() ? -1 : 1};
+        return new int[]{0};
+    }
+
     private void breakArea(Player p, ItemStack tool, Block origin, BlockFace face) {
-        for (int a = -1; a <= 1; a++) {
-            for (int b = -1; b <= 1; b++) {
-                if (a == 0 && b == 0) continue;
-
-                Block target = switch (face) {
-                    case UP, DOWN -> origin.getRelative(a, 0, b);
-                    case NORTH, SOUTH -> origin.getRelative(a, b, 0);
-                    default -> origin.getRelative(0, b, a);
-                };
-
+        for (Block target : area(p, origin, face)) {
+            {
                 Material type = target.getType();
                 if (type.isAir() || type.getHardness() < 0 || target.isLiquid()) continue;
                 if (NEVER_BREAK.contains(type)) continue; // bedrock, portals, barriers...
-                if (target.getState() instanceof TileState) continue; // chests, spawners, signs...
+                if (target.getState(false) instanceof TileState) continue; // chests, spawners, signs...
                 if (!target.isPreferredTool(tool)) continue;
 
                 // Ask other plugins (GriefPrevention etc.) if this break is allowed
@@ -297,7 +344,7 @@ public final class PetalTools implements Listener {
                 if (xp > 0) {
                     target.getWorld().spawn(loc, ExperienceOrb.class, orb -> orb.setExperience(xp));
                 }
-                target.getWorld().spawnParticle(Particle.BLOCK, loc, 12, 0.25, 0.25, 0.25, target.getBlockData());
+                target.getWorld().spawnParticle(Particle.BLOCK, loc, 6, 0.25, 0.25, 0.25, target.getBlockData());
                 target.setType(Material.AIR);
 
                 if (wear(p, tool)) return; // tool broke
