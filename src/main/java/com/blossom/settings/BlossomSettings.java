@@ -58,7 +58,7 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
         getServer().getPluginManager().registerEvents(spawners, this);
         getServer().getPluginManager().registerEvents(new SpawnerMenu(this), this);
         ShardsCommand shardsCommand = new ShardsCommand(this);
-        PluginCommand shardsCmd = getCommand("shards");
+        PluginCommand shardsCmd = getCommand("petals");
         if (shardsCmd != null) {
             shardsCmd.setExecutor(shardsCommand);
             shardsCmd.setTabCompleter(shardsCommand);
@@ -71,7 +71,7 @@ public final class BlossomSettings extends JavaPlugin implements CommandExecutor
         getServer().getPluginManager().registerEvents(shop, this);
 
         PetalsCommand petalsCommand = new PetalsCommand(this, shop);
-        for (String name : List.of("petals", "petalsshop")) {
+        for (String name : List.of("petalsshop")) {
             PluginCommand cmd = getCommand(name);
             if (cmd != null) {
                 cmd.setExecutor(petalsCommand);
