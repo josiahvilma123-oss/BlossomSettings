@@ -22,7 +22,7 @@ import java.util.Locale;
  */
 public final class ShardsCommand implements CommandExecutor, TabCompleter {
 
-    static final TextColor AQUA = TextColor.color(0x7FE3F0);
+    static final TextColor AQUA = TextColor.color(0xFF69B4); // petal pink
     private static final String ADMIN = "blossomsettings.shards.admin";
 
     private final BlossomSettings plugin;
@@ -35,11 +35,11 @@ public final class ShardsCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
             if (!(sender instanceof Player player)) {
-                sender.sendMessage("Usage: /shards <check|give|take|set> <player> [amount]");
+                sender.sendMessage("Usage: /petals <check|give|take|set> <player> [amount]");
                 return true;
             }
             player.sendMessage(Component.text("You have ", NamedTextColor.GRAY)
-                    .append(Component.text("✦ " + ShardsManager.format(plugin.shards().get(player.getUniqueId())), AQUA))
+                    .append(Component.text("✿ " + ShardsManager.format(plugin.shards().get(player.getUniqueId())), AQUA))
                     .append(Component.text(". Spend them at /ps", NamedTextColor.GRAY)));
             return true;
         }
@@ -50,7 +50,7 @@ public final class ShardsCommand implements CommandExecutor, TabCompleter {
         String sub = args[0].toLowerCase(Locale.ROOT);
         if (!List.of("check", "give", "take", "set").contains(sub) || args.length < 2
                 || (!sub.equals("check") && args.length < 3)) {
-            sender.sendMessage(Component.text("Usage: /shards <check|give|take|set> <player> [amount]", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Usage: /petals <check|give|take|set> <player> [amount]", NamedTextColor.RED));
             return true;
         }
         OfflinePlayer target = Bukkit.getPlayerExact(args[1]);
@@ -83,7 +83,7 @@ public final class ShardsCommand implements CommandExecutor, TabCompleter {
         }
         plugin.shards().save();
         if (sub.equals("give") && target instanceof Player online && sender != online) {
-            online.sendMessage(Component.text("+ " + ShardsManager.format(amount), AQUA));
+            online.sendMessage(Component.text("+ ✿ " + ShardsManager.format(amount), AQUA));
         }
         sender.sendMessage(Component.text(name + " now has " + ShardsManager.format(plugin.shards().get(target.getUniqueId())) + ".",
                 NamedTextColor.GREEN));

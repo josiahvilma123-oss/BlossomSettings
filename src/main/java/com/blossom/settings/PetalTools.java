@@ -142,6 +142,7 @@ public final class PetalTools implements Listener {
             lore.add(line("✦ Chops " + Math.round(axeBonus() * 100) + "% faster"));
         } else {
             lore.add(line("✦ Mines a 3x3 area"));
+            lore.add(line("✦ Sneak to mine one block"));
         }
         lore.add(line("✦ Enchant it however you like"));
         lore.add(Component.empty());
@@ -252,40 +253,58 @@ public final class PetalTools implements Listener {
         // Only the Blossom Pickaxe breaks 3x3 (the axe just chops faster)
         if (kind != ShopItem.AMETHYST_PICKAXE) return;
 
-        // 3x3: work out which face the player is mining
+        // Like DonutSMP: sneak to mine just one block
+        if (p.isSneaking()) return;
+
+        // Which side of the block is being mined decides how the 3x3 is turned
         RayTraceResult hit = p.rayTraceBlocks(6.0, FluidCollisionMode.NEVER);
-        if (hit == null || hit.getHitBlockFace() == null || !origin.equals(hit.getHitBlock())) return;
+        BlockFace face = hit != null && origin.equals(hit.getHitBlock()) && hit.getHitBlockFace() != null
+                ? hit.getHitBlockFace()
+                : fallbackFace(p);
 
         busy.add(p.getUniqueId());
         try {
-            breakArea(p, tool, origin, hit.getHitBlockFace());
+            breakArea(p, tool, origin, face);
         } finally {
             busy.remove(p.getUniqueId());
         }
     }
 
     /**
-     * DonutSMP-style 3x3: the 3x3 square turns with the way you're looking.
-     *  - looking down or up:      a flat 3x3 of floor / ceiling
-     *  - looking forward/sideways: a 3x3 wall
+     * DonutSMP Amethyst Pickaxe style: a 3x3 plane, centred on the block you mine and
+     * turned to match the side you hit it from (floor, wall or ceiling).
      */
-    private List<Block> area(Block origin, BlockFace face) {
+    private List<Block> area(Player p, Block origin, BlockFace face) {
         List<Block> out = new ArrayList<>();
-        for (int a = -1; a <= 1; a++) {
-            for (int b = -1; b <= 1; b++) {
-                if (a == 0 && b == 0) continue; // the game already breaks the middle one
-                out.add(switch (face) {
-                    case UP, DOWN -> origin.getRelative(a, 0, b);
-                    case NORTH, SOUTH -> origin.getRelative(a, b, 0);
-                    default -> origin.getRelative(0, b, a);
-                });
-            }
+        if (face == BlockFace.UP || face == BlockFace.DOWN) {
+            // floor or ceiling: flat 3x3 around the block
+            for (int a = -1; a <= 1; a++)
+                for (int b = -1; b <= 1; b++)
+                    out.add(origin.getRelative(a, 0, b));
+        } else {
+            // a wall: 3 wide x 3 tall. If you mine at foot or head height it starts at your feet,
+            // so you get a clean tunnel and never a hole in the floor.
+            int feet = p.getLocation().getBlockY();
+            int bottom = (origin.getY() == feet || origin.getY() == feet + 1) ? feet - origin.getY() : -1;
+            boolean alongX = face == BlockFace.NORTH || face == BlockFace.SOUTH;
+            for (int w = -1; w <= 1; w++)
+                for (int dy = bottom; dy <= bottom + 2; dy++)
+                    out.add(alongX ? origin.getRelative(w, dy, 0) : origin.getRelative(0, dy, w));
         }
+        out.remove(origin); // the game already breaks this one
         return out;
     }
 
+    /** If the side can't be worked out: looking down/up = floor/ceiling, otherwise the wall in front. */
+    private static BlockFace fallbackFace(Player p) {
+        float pitch = p.getLocation().getPitch();
+        if (pitch > 50) return BlockFace.UP;
+        if (pitch < -50) return BlockFace.DOWN;
+        return p.getFacing().getOppositeFace();
+    }
+
     private void breakArea(Player p, ItemStack tool, Block origin, BlockFace face) {
-        for (Block target : area(origin, face)) {
+        for (Block target : area(p, origin, face)) {
             {
                 Material type = target.getType();
                 if (type.isAir() || type.getHardness() < 0 || target.isLiquid()) continue;

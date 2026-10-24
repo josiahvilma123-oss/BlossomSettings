@@ -24,7 +24,7 @@ import java.util.UUID;
 /** Gives Shards for playtime (not AFK) and kills. */
 public final class PetalsEarner implements Listener {
 
-    private static final TextColor AQUA = TextColor.color(0x7FE3F0);
+    private static final TextColor AQUA = TextColor.color(0xFF69B4);
 
     private final BlossomSettings plugin;
     private final NamespacedKey noPayKey;
@@ -50,8 +50,8 @@ public final class PetalsEarner implements Listener {
         long nowMs = System.currentTimeMillis();
         killCooldowns.values().removeIf(t -> nowMs - t > 3_600_000L);
 
-        int need = Math.max(1, plugin.getConfig().getInt("shards.playtime.minutes", 10));
-        long amount = plugin.getConfig().getLong("shards.playtime.amount", 10);
+        int need = Math.max(1, plugin.getConfig().getInt("earn-petals.playtime.minutes", 10));
+        long amount = plugin.getConfig().getLong("earn-petals.playtime.amount", 25);
         if (amount <= 0) return;
 
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -75,7 +75,7 @@ public final class PetalsEarner implements Listener {
 
     private void give(Player p, long amount) {
         plugin.shards().add(p.getUniqueId(), amount);
-        p.sendActionBar(Component.text("+ ✦ " + ShardsManager.format(amount), AQUA));
+        p.sendActionBar(Component.text("+ ✿ " + ShardsManager.format(amount), AQUA));
     }
 
     /** Mobs from spawners, eggs and commands don't pay, so farms can't print Shards. */
@@ -97,9 +97,9 @@ public final class PetalsEarner implements Listener {
 
         if (victim instanceof Player v) {
             if (v.getUniqueId().equals(killer.getUniqueId())) return;
-            long amount = plugin.getConfig().getLong("shards.kill-player.amount", 15);
+            long amount = plugin.getConfig().getLong("earn-petals.kill-player.amount", 30);
             long cooldownMs = plugin.getConfig()
-                    .getLong("shards.kill-player.same-victim-cooldown-minutes", 30) * 60_000L;
+                    .getLong("earn-petals.kill-player.same-victim-cooldown-minutes", 30) * 60_000L;
             String key = killer.getUniqueId() + ":" + v.getUniqueId();
             long now = System.currentTimeMillis();
             Long last = killCooldowns.get(key);
@@ -108,7 +108,7 @@ public final class PetalsEarner implements Listener {
             if (amount > 0) give(killer, amount);
         } else if (victim instanceof Enemy) {
             if (victim.getPersistentDataContainer().has(noPayKey, PersistentDataType.BYTE)) return;
-            long amount = plugin.getConfig().getLong("shards.kill-hostile-mob.amount", 1);
+            long amount = plugin.getConfig().getLong("earn-petals.kill-hostile-mob.amount", 2);
             if (amount > 0) give(killer, amount);
         }
     }

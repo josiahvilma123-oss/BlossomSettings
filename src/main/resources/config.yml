@@ -14,22 +14,22 @@ mob-spawns:
     - MOUNT
     - PATROL
 
-shards:
-  # Shards are the /ps currency. Players earn them by playing (not AFK),
+earn-petals:
+  # Petals are the /ps currency. Players earn them by playing (not AFK),
   # killing mobs and players, and from /daily (set in BlossomEconomy).
   playtime:
     # Only minutes where the player actually moved count
     minutes: 10
-    amount: 10
+    amount: 25
   # Mobs from spawners and spawn eggs pay nothing
   kill-hostile-mob:
-    amount: 1
+    amount: 2
   # Killing the same player again within the cooldown pays nothing
   kill-player:
-    amount: 15
+    amount: 30
     same-victim-cooldown-minutes: 30
 
-# /ps prices in Shards. Set a price to 0 to hide that item.
+# /ps prices in Petals. Set a price to 0 to hide that item.
 shard-prices:
   blossom_pickaxe: 350        # mines 3x3, lasts 24 hours
   petal_pickaxe: 300          # auto-smelts, lasts 24 hours

@@ -44,9 +44,9 @@ public final class PetalsPlaceholders extends PlaceholderExpansion {
             return "0";
         }
         String p = params.toLowerCase();
-        if (p.startsWith("shards")) {
+        if (p.startsWith("shards") || p.startsWith("petals")) {
             long shards = plugin.shards().get(player.getUniqueId());
-            return p.equals("shards_formatted") ? String.format(java.util.Locale.US, "%,d", shards) : String.valueOf(shards);
+            return p.endsWith("_formatted") ? String.format(java.util.Locale.US, "%,d", shards) : String.valueOf(shards);
         }
         long petals = plugin.petals().get(player.getUniqueId());
         return switch (p) {

@@ -14,14 +14,10 @@ commands:
     description: Open the Petals shop
     aliases: [ps, petalshop, pshop]
     permission: blossomsettings.petalsshop
-  shards:
-    description: Check your Shards (admins can give, take, set)
-    aliases: [shard]
-    permission: blossomsettings.shards
   petals:
     description: Check your Petals (admins can give, take, set)
-    aliases: [petal]
-    permission: blossomsettings.petals
+    aliases: [petal, shards, shard]
+    permission: blossomsettings.shards
 
 permissions:
   blossomsettings.use:

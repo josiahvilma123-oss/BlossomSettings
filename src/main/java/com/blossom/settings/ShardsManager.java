@@ -75,8 +75,8 @@ public final class ShardsManager {
         return true;
     }
 
-    /** "1,250 Shards" */
+    /** "1,250 Petals" (the /ps currency, saved in shards.yml) */
     public static String format(long amount) {
-        return String.format(java.util.Locale.US, "%,d", amount) + (amount == 1 ? " Shard" : " Shards");
+        return String.format(java.util.Locale.US, "%,d", amount) + (amount == 1 ? " Petal" : " Petals");
     }
 }

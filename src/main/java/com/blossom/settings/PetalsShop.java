@@ -77,7 +77,7 @@ public final class PetalsShop implements Listener {
         buildLayout();
         ShopHolder holder = new ShopHolder();
         Inventory inv = Bukkit.createInventory(holder, 54,
-                Component.text("✦ Shard Shop", PINK).decoration(TextDecoration.BOLD, true));
+                Component.text("✿ Petal Shop", PINK).decoration(TextDecoration.BOLD, true));
         holder.inventory = inv;
 
         ItemStack filler = new ItemStack(Material.PINK_STAINED_GLASS_PANE);
@@ -113,11 +113,11 @@ public final class PetalsShop implements Listener {
     private ItemStack balanceItem(Player player) {
         ItemStack item = new ItemStack(Material.PRISMARINE_CRYSTALS);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text("Your Shards: ", NamedTextColor.WHITE)
+        meta.displayName(Component.text("Your Petals: ", NamedTextColor.WHITE)
                 .decoration(TextDecoration.ITALIC, false)
-                .append(Component.text("✦ " + ShardsManager.format(plugin.shards().get(player.getUniqueId())), ShardsCommand.AQUA)));
+                .append(Component.text("✿ " + ShardsManager.format(plugin.shards().get(player.getUniqueId())), ShardsCommand.AQUA)));
         meta.lore(List.of(
-                Component.text("Earn Shards by playing, killing", NamedTextColor.GRAY)
+                Component.text("Earn Petals by playing, killing", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("mobs and players, and from /daily", NamedTextColor.GRAY)
                         .decoration(TextDecoration.ITALIC, false)));
@@ -141,7 +141,7 @@ public final class PetalsShop implements Listener {
         lore.add(Component.empty());
         lore.add(Component.text("Price: ", NamedTextColor.GRAY)
                 .decoration(TextDecoration.ITALIC, false)
-                .append(Component.text("✦ " + ShardsManager.format(plugin.price(s)), ShardsCommand.AQUA)));
+                .append(Component.text("✿ " + ShardsManager.format(plugin.price(s)), ShardsCommand.AQUA)));
         lore.add(Component.text("Click to buy", NamedTextColor.YELLOW)
                 .decoration(TextDecoration.ITALIC, false));
         meta.lore(lore);
@@ -187,7 +187,7 @@ public final class PetalsShop implements Listener {
         }
 
         if (!plugin.shards().withdraw(player.getUniqueId(), price)) {
-            player.sendMessage(Component.text("Something went wrong taking your Shards. Try again.", NamedTextColor.RED));
+            player.sendMessage(Component.text("Something went wrong taking your Petals. Try again.", NamedTextColor.RED));
             return;
         }
         player.getInventory().addItem(giveItem(item));

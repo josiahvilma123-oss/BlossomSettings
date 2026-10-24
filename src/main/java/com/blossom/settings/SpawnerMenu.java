@@ -122,9 +122,9 @@ public final class SpawnerMenu implements Listener {
         return item(icon, "&b&l" + name + " Upgrade", List.of(
                 what,
                 "&7Level &f" + level + " &7→ &f" + (level + 1),
-                "&7Cost: &b✦ " + ShardsManager.format(cost),
+                "&7Cost: &#FF69B4✿ " + ShardsManager.format(cost),
                 "",
-                have >= cost ? "&#FFB6C1Click to upgrade" : "&cYou have ✦ " + ShardsManager.format(have)));
+                have >= cost ? "&#FFB6C1Click to upgrade" : "&cYou have ✿ " + ShardsManager.format(have)));
     }
 
     @EventHandler
@@ -213,7 +213,7 @@ public final class SpawnerMenu implements Listener {
         if (level >= sm.maxLevel(which)) return;
         long cost = sm.upgradeCost(which, level + 1);
         if (cost < 0 || !plugin.shards().withdraw(p.getUniqueId(), cost)) {
-            p.sendMessage(Component.text("You need ✦ " + ShardsManager.format(cost) + " for that.", NamedTextColor.RED));
+            p.sendMessage(Component.text("You need ✿ " + ShardsManager.format(cost) + " for that.", NamedTextColor.RED));
             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8f, 1f);
             return;
         }
