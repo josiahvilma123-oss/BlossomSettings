@@ -49,6 +49,8 @@ tools:
   lifetime-hours: 24
   # How much faster the Blossom Axe breaks blocks (0.5 = 50% faster)
   axe-speed-bonus: 0.5
+  # Biggest tree the Blossom Axe will chop down in one go
+  axe-max-logs: 256
 
 spawners:
   enabled: true

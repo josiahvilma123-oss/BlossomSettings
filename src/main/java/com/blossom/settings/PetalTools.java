@@ -12,6 +12,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.TileState;
@@ -139,7 +140,8 @@ public final class PetalTools implements Listener {
             lore.add(line("✦ Auto-smelts what you mine"));
             lore.add(line("✦ Ores, cobblestone, sand and more"));
         } else if (s == ShopItem.AMETHYST_AXE) {
-            lore.add(line("✦ Chops " + Math.round(axeBonus() * 100) + "% faster"));
+            lore.add(line("✦ Chops down the whole tree"));
+            lore.add(line("✦ Sneak to chop one log"));
         } else {
             lore.add(line("✦ Mines a 3x3 area"));
             lore.add(line("✦ Sneak to mine one block"));
@@ -250,7 +252,19 @@ public final class PetalTools implements Listener {
             return;
         }
 
-        // Only the Blossom Pickaxe breaks 3x3 (the axe just chops faster)
+        // Blossom Axe: chops down the whole tree at once (sneak = one log)
+        if (kind == ShopItem.AMETHYST_AXE) {
+            if (!p.isSneaking() && Tag.LOGS.isTagged(origin.getType())) {
+                busy.add(p.getUniqueId());
+                try {
+                    fellTree(p, tool, origin);
+                } finally {
+                    busy.remove(p.getUniqueId());
+                }
+            }
+            return;
+        }
+
         if (kind != ShopItem.AMETHYST_PICKAXE) return;
 
         // Like DonutSMP: sneak to mine just one block
@@ -274,25 +288,86 @@ public final class PetalTools implements Listener {
      * DonutSMP Amethyst Pickaxe style: a 3x3 plane, centred on the block you mine and
      * turned to match the side you hit it from (floor, wall or ceiling).
      */
+    /** 9 blocks: a 3x3 centred on the block you mine, turned to match the side you hit. */
     private List<Block> area(Player p, Block origin, BlockFace face) {
         List<Block> out = new ArrayList<>();
-        if (face == BlockFace.UP || face == BlockFace.DOWN) {
-            // floor or ceiling: flat 3x3 around the block
-            for (int a = -1; a <= 1; a++)
-                for (int b = -1; b <= 1; b++)
-                    out.add(origin.getRelative(a, 0, b));
-        } else {
-            // a wall: 3 wide x 3 tall. If you mine at foot or head height it starts at your feet,
-            // so you get a clean tunnel and never a hole in the floor.
-            int feet = p.getLocation().getBlockY();
-            int bottom = (origin.getY() == feet || origin.getY() == feet + 1) ? feet - origin.getY() : -1;
-            boolean alongX = face == BlockFace.NORTH || face == BlockFace.SOUTH;
-            for (int w = -1; w <= 1; w++)
-                for (int dy = bottom; dy <= bottom + 2; dy++)
-                    out.add(alongX ? origin.getRelative(w, dy, 0) : origin.getRelative(0, dy, w));
+        for (int a = -1; a <= 1; a++) {
+            for (int b = -1; b <= 1; b++) {
+                if (a == 0 && b == 0) continue; // the game already breaks the middle one
+                out.add(switch (face) {
+                    case UP, DOWN -> origin.getRelative(a, 0, b);
+                    case NORTH, SOUTH -> origin.getRelative(a, b, 0);
+                    default -> origin.getRelative(0, b, a);
+                });
+            }
         }
-        out.remove(origin); // the game already breaks this one
         return out;
+    }
+
+    /* ---------------- Tree felling (Blossom Axe) ---------------- */
+
+    /**
+     * Breaks every log connected to the one you chopped, plus the tree's natural leaves.
+     * It only runs on real trees (logs that touch natural leaves), so log houses are safe.
+     */
+    private void fellTree(Player p, ItemStack tool, Block origin) {
+        int maxLogs = Math.max(1, plugin.getConfig().getInt("tools.axe-max-logs", 256));
+        List<Block> logs = new ArrayList<>();
+        Set<Block> seen = new HashSet<>();
+        java.util.ArrayDeque<Block> queue = new java.util.ArrayDeque<>();
+        queue.add(origin);
+        seen.add(origin);
+        while (!queue.isEmpty() && logs.size() < maxLogs) {
+            Block b = queue.poll();
+            logs.add(b);
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = 0; dy <= 1; dy++)           // only sideways and up, never down into the ground
+                    for (int dz = -1; dz <= 1; dz++) {
+                        Block n = b.getRelative(dx, dy, dz);
+                        if (seen.add(n) && Tag.LOGS.isTagged(n.getType())) queue.add(n);
+                    }
+        }
+
+        // Find the natural leaves around those logs
+        List<Block> leaves = new ArrayList<>();
+        Set<Block> leafSeen = new HashSet<>();
+        for (Block log : logs) {
+            for (int dx = -3; dx <= 3; dx++)
+                for (int dy = -1; dy <= 3; dy++)
+                    for (int dz = -3; dz <= 3; dz++) {
+                        Block n = log.getRelative(dx, dy, dz);
+                        if (leafSeen.add(n) && Tag.LEAVES.isTagged(n.getType())
+                                && n.getBlockData() instanceof org.bukkit.block.data.type.Leaves l && !l.isPersistent()) {
+                            leaves.add(n);
+                        }
+                    }
+        }
+        if (leaves.isEmpty()) return; // no natural leaves = probably a build, chop one log like normal
+
+        Location dropAt = origin.getLocation().add(0.5, 0.5, 0.5);
+        for (Block log : logs) {
+            if (log.equals(origin)) continue; // the game breaks this one
+            if (!breakOne(p, tool, log, dropAt, true)) return; // tool broke
+        }
+        for (Block leaf : leaves) {
+            breakOne(p, tool, leaf, dropAt, false);
+        }
+        p.playSound(origin.getLocation(), Sound.BLOCK_WOOD_BREAK, 1f, 0.8f);
+    }
+
+    /** Breaks one block as the player (so claims are respected). Returns false if the tool broke. */
+    private boolean breakOne(Player p, ItemStack tool, Block target, Location dropAt, boolean wearTool) {
+        if (target.getType().isAir() || NEVER_BREAK.contains(target.getType())) return true;
+        BlockBreakEvent event = new BlockBreakEvent(target, p);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) return true;
+        if (event.isDropItems()) {
+            for (ItemStack drop : target.getDrops(tool, p)) {
+                target.getWorld().dropItemNaturally(dropAt, drop);
+            }
+        }
+        target.setType(Material.AIR);
+        return !wearTool || !wear(p, tool);
     }
 
     /** If the side can't be worked out: looking down/up = floor/ceiling, otherwise the wall in front. */
