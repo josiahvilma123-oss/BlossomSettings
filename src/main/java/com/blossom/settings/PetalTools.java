@@ -46,7 +46,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * The custom tools sold in /petalsshop.
- *  - Blossom Pickaxe:  mines a 3x3 area
+ *  - Blossom Pickaxe:  digs 3 blocks deep (1 wide)
  *  - Petal Pickaxe:    Haste + auto-smelts what it mines
  *  - Blossom Axe:      chops wood faster (block break speed bonus)
  */
@@ -143,7 +143,7 @@ public final class PetalTools implements Listener {
             lore.add(line("✦ Chops down the whole tree"));
             lore.add(line("✦ Sneak to chop one log"));
         } else {
-            lore.add(line("✦ Mines a 3x3 area"));
+            lore.add(line("✦ Digs 3 blocks deep"));
             lore.add(line("✦ Sneak to mine one block"));
         }
         lore.add(line("✦ Enchant it however you like"));
@@ -270,7 +270,7 @@ public final class PetalTools implements Listener {
         // Like DonutSMP: sneak to mine just one block
         if (p.isSneaking()) return;
 
-        // Which side of the block is being mined decides how the 3x3 is turned
+        // Which side you hit decides which way the 3 blocks go
         RayTraceResult hit = p.rayTraceBlocks(6.0, FluidCollisionMode.NEVER);
         BlockFace face = hit != null && origin.equals(hit.getHitBlock()) && hit.getHitBlockFace() != null
                 ? hit.getHitBlockFace()
@@ -285,21 +285,15 @@ public final class PetalTools implements Listener {
     }
 
     /**
-     * DonutSMP Amethyst Pickaxe style: a 3x3 plane, centred on the block you mine and
-     * turned to match the side you hit it from (floor, wall or ceiling).
+     * 3 blocks deep, 1 wide: the block you mine plus the 2 behind it.
+     * Digging straight down = 3 blocks down. Mining a wall = 3 blocks forward.
      */
-    /** 9 blocks: a 3x3 centred on the block you mine, turned to match the side you hit. */
     private List<Block> area(Player p, Block origin, BlockFace face) {
+        int depth = Math.max(1, plugin.getConfig().getInt("tools.pickaxe-depth", 3));
+        BlockFace into = face.getOppositeFace(); // away from the player
         List<Block> out = new ArrayList<>();
-        for (int a = -1; a <= 1; a++) {
-            for (int b = -1; b <= 1; b++) {
-                if (a == 0 && b == 0) continue; // the game already breaks the middle one
-                out.add(switch (face) {
-                    case UP, DOWN -> origin.getRelative(a, 0, b);
-                    case NORTH, SOUTH -> origin.getRelative(a, b, 0);
-                    default -> origin.getRelative(0, b, a);
-                });
-            }
+        for (int i = 1; i < depth; i++) {        // the game already breaks the first one
+            out.add(origin.getRelative(into, i));
         }
         return out;
     }
