@@ -51,8 +51,6 @@ tools:
   axe-speed-bonus: 0.5
   # Biggest tree the Blossom Axe will chop down in one go
   axe-max-logs: 256
-  # how many blocks deep the Blossom Pickaxe digs (1 wide)
-  pickaxe-depth: 3
 
 spawners:
   enabled: true

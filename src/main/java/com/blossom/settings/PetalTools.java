@@ -46,7 +46,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * The custom tools sold in /petalsshop.
- *  - Blossom Pickaxe:  digs 3 blocks deep (1 wide)
+ *  - Blossom Pickaxe:  mines a 3x3 (DonutSMPTools style)
  *  - Petal Pickaxe:    Haste + auto-smelts what it mines
  *  - Blossom Axe:      chops wood faster (block break speed bonus)
  */
@@ -143,7 +143,7 @@ public final class PetalTools implements Listener {
             lore.add(line("✦ Chops down the whole tree"));
             lore.add(line("✦ Sneak to chop one log"));
         } else {
-            lore.add(line("✦ Digs 3 blocks deep"));
+            lore.add(line("✦ Mines a 3x3 area"));
             lore.add(line("✦ Sneak to mine one block"));
         }
         lore.add(line("✦ Enchant it however you like"));
@@ -270,11 +270,9 @@ public final class PetalTools implements Listener {
         // Like DonutSMP: sneak to mine just one block
         if (p.isSneaking()) return;
 
-        // Which side you hit decides which way the 3 blocks go
-        RayTraceResult hit = p.rayTraceBlocks(6.0, FluidCollisionMode.NEVER);
-        BlockFace face = hit != null && origin.equals(hit.getHitBlock()) && hit.getHitBlockFace() != null
-                ? hit.getHitBlockFace()
-                : fallbackFace(p);
+        // Exactly like the DonutSMPTools Amethyst Pickaxe: only the way you face left/right
+        // (north/south/east/west) matters, even when you look straight down
+        BlockFace face = p.getFacing();
 
         busy.add(p.getUniqueId());
         try {
@@ -285,15 +283,18 @@ public final class PetalTools implements Listener {
     }
 
     /**
-     * 3 blocks deep, 1 wide: the block you mine plus the 2 behind it.
-     * Digging straight down = 3 blocks down. Mining a wall = 3 blocks forward.
+     * Copy of the DonutSMPTools Amethyst Pickaxe shape: a standing 3x3 wall centred on the
+     * block you mine (1 up, 1 down, 1 left, 1 right), turned to the way you are facing.
      */
     private List<Block> area(Player p, Block origin, BlockFace face) {
-        int depth = Math.max(1, plugin.getConfig().getInt("tools.pickaxe-depth", 3));
-        BlockFace into = face.getOppositeFace(); // away from the player
         List<Block> out = new ArrayList<>();
-        for (int i = 1; i < depth; i++) {        // the game already breaks the first one
-            out.add(origin.getRelative(into, i));
+        for (int a = -1; a <= 1; a++) {
+            for (int b = -1; b <= 1; b++) {
+                if (a == 0 && b == 0) continue; // the game already breaks the middle one
+                out.add(face == BlockFace.NORTH || face == BlockFace.SOUTH
+                        ? origin.getRelative(a, b, 0)
+                        : origin.getRelative(0, b, a));
+            }
         }
         return out;
     }
@@ -379,7 +380,6 @@ public final class PetalTools implements Listener {
                 if (type.isAir() || type.getHardness() < 0 || target.isLiquid()) continue;
                 if (NEVER_BREAK.contains(type)) continue; // bedrock, portals, barriers...
                 if (target.getState(false) instanceof TileState) continue; // chests, spawners, signs...
-                if (!target.isPreferredTool(tool)) continue;
 
                 // Ask other plugins (GriefPrevention etc.) if this break is allowed
                 BlockBreakEvent event = new BlockBreakEvent(target, p);
@@ -399,8 +399,7 @@ public final class PetalTools implements Listener {
                 }
                 target.getWorld().spawnParticle(Particle.BLOCK, loc, 6, 0.25, 0.25, 0.25, target.getBlockData());
                 target.setType(Material.AIR);
-
-                if (wear(p, tool)) return; // tool broke
+                // Like DonutSMPTools: the extra 8 blocks don't use up durability
             }
         }
     }
